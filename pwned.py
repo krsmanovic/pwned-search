@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+#
+# Altered original author's code to have no console trace of passwords
+#
+
 import hashlib
 import sys
 
@@ -8,12 +13,22 @@ except ModuleNotFoundError:
     print("###  pip install requests  ###")
     raise
 
+# Let's hide entered string
+
+import getpass
+
+try: 
+    pwd = getpass.getpass(prompt='Password: ', stream=None) 
+except Exception as error: 
+    print('ERROR', error)
+
+# Show only 2 first characters of entered string for convenience
+# in any type of output
+
+maskedpwd = pwd[0:2]+("." * int(pwd.count('') - 2))
 
 def lookup_pwned_api(pwd):
     """Returns hash and number of times password was seen in pwned database.
-
-    Args:
-        pwd: password to check
 
     Returns:
         A (sha1, count) tuple where sha1 is SHA-1 hash of pwd and count is number
@@ -39,22 +54,19 @@ def lookup_pwned_api(pwd):
 
 def main(args):
     ec = 0
-    for pwd in args or sys.stdin:
-        pwd = pwd.strip()
-        try:
-            sha1pwd, count = lookup_pwned_api(pwd)
-        except UnicodeError:
-            errormsg = sys.exc_info()[1]
-            print("{0} could not be checked: {1}".format(pwd, errormsg))
-            ec = 1
-            continue
+    try:
+        sha1pwd, count = lookup_pwned_api(pwd)
+    except UnicodeError:
+        errormsg = sys.exc_info()[1]
+        print("\nString {0} could not be checked: {1}".format(maskedpwd, errormsg))
+        ec = 1
 
-        if count:
-            foundmsg = "{0} was found with {1} occurrences (hash: {2})"
-            print(foundmsg.format(pwd, count, sha1pwd))
-            ec = 1
-        else:
-            print("{} was not found".format(pwd))
+    if count:
+        foundmsg = "\nString {0} was found with {1} occurrences (hash: {2})"
+        print(foundmsg.format(maskedpwd, count, sha1pwd))
+        ec = 1
+    else:
+        print("\nString {0} was not found".format(maskedpwd))
     return ec
 
 
